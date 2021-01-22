@@ -7,7 +7,7 @@ WHITE = (255, 255, 255)
 # Game settings
 WIDTH = 1000
 HEIGHT = 1000
-FPS = 10
+FPS = 5
 TITLE = "Sugarscape"
 
 TILESIZE = 20

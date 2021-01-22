@@ -8,7 +8,8 @@ class Agent(pg.sprite.Sprite):
     def __init__(self, sugarscape, x = None, y = None):
 
         # Pygame sprite stuff
-        self.groups = sugarscape.all_sprites
+        if type(self) == Agent:
+            self.groups = [sugarscape.all_sprites, sugarscape.agents]
         pg.sprite.Sprite.__init__(self, self.groups)
         self.image = pg.Surface((TILESIZE - 10, TILESIZE - 10))
         self.image.fill(GREEN)
@@ -23,6 +24,10 @@ class Agent(pg.sprite.Sprite):
 
         self.x = x
         self.y = y
+
+        # Definitely fixed ghost sprite
+        self.rect.x = -10
+        self.rect.y = -10
 
         # Generate coordinates if not specified during init.
         if self.x is None or self.y is None:
@@ -41,11 +46,12 @@ class Agent(pg.sprite.Sprite):
     def look(self):
 
         # I hate sublist 2darrays
-        north = [self.sugarscape.map[max(0, self.y - dy)][self.x] for dy in range(1, self.vision + 1)]
-        south = [self.sugarscape.map[min(GRIDHEIGHT - 1, self.y + dy)][self.x] for dy in range(1, self.vision + 1)]
-        east = [self.sugarscape.map[self.y][min(GRIDWIDTH - 1, self.x + dx)] for dx in range(1, self.vision + 1)]
-        west = [self.sugarscape.map[self.y][max(0, self.x - dx)] for dx in range(1, self.vision + 1)]
-        directions = [north, south, east, west]
+        north = [self.sugarscape.map[(self.y - dy) % GRIDHEIGHT][self.x] for dy in range(1, self.vision + 1)]
+        south = [self.sugarscape.map[(self.y + dy) % GRIDHEIGHT][self.x] for dy in range(1, self.vision + 1)]
+        east = [self.sugarscape.map[self.y][(self.x + dx) % GRIDWIDTH] for dx in range(1, self.vision + 1)]
+        west = [self.sugarscape.map[self.y][(self.x - dx) % GRIDWIDTH] for dx in range(1, self.vision + 1)]
+        current = [self.sugarscape.map[self.y][self.x]]
+        directions = [north, south, east, west, current]
         random.shuffle(directions)
         # Flatten directions into cells
         cells = [cell for direction in directions for cell in direction]
@@ -54,7 +60,7 @@ class Agent(pg.sprite.Sprite):
         best_cell = cells[0]
         best_val = cells[0].getSugar()
         for cell in cells:
-            if cell.getSugar() > best_val and cell.agentPresent is False:
+            if cell.getSugar() > best_val and cell.agentPresent() is False:
                 best_cell = cell
                 best_val = cell.getSugar()
 
@@ -100,7 +106,9 @@ class Agent(pg.sprite.Sprite):
         if self.sugar <= 0:
             self.sugar = 0
             self.sugarscape.map[self.y][self.x].delAgent()
-            self.sugarscape.all_sprites.remove(self)
+
+            for group in self.groups:
+                group.remove(self)
 
         self.eat()
 
@@ -119,8 +127,9 @@ class Agent(pg.sprite.Sprite):
 
 class ReproductiveAgent(Agent):
 
-    def __init__(self, sugarscape, x, y):
+    def __init__(self, sugarscape, x = None, y = None):
 
+        self.groups = [sugarscape.all_sprites, sugarscape.reproductive_agents]
         Agent.__init__(self, sugarscape, x, y)
         self.reproduce_threshold = 1.5 * self.metabolism
 
@@ -128,17 +137,19 @@ class ReproductiveAgent(Agent):
 
         if self.sugar >= self.reproduce_threshold:
 
-            north = self.sugarscape.map[max(0, self.y - 1)][self.x]
-            south = self.sugarscape.map[min(GRIDHEIGHT - 1, self.y + 1)][self.x]
-            east = self.sugarscape.map[self.y][min(GRIDWIDTH - 1, self.x + 1)]
-            west = self.sugarscape.map[self.y][max(0, self.x - 1)]
+            north = self.sugarscape.map[(self.y - 1) % GRIDHEIGHT][self.x]
+            south = self.sugarscape.map[(self.y + 1) % GRIDHEIGHT][self.x]
+            east = self.sugarscape.map[self.y][(self.x + 1) % GRIDWIDTH]
+            west = self.sugarscape.map[self.y][(self.x - 1) % GRIDWIDTH]
             directions = [north, south, east, west]
             random.shuffle(directions)
 
             for d in directions:
-                if d.agentPresent() is False:
+                if ~d.agentPresent():
                     x, y = d.getCoords()
-                    random.choice([Agent(self.sugarscape, x, y), ReproductiveAgent(self.sugarscape, x, y)])
+                    print(x, y)
+                    Agent(self.sugarscape, x, y)
+                    #random.choice([Agent(self.sugarscape, x, y), ReproductiveAgent(self.sugarscape, x, y)])
                     return
 
     def update(self):
@@ -156,7 +167,7 @@ class Cell(pg.sprite.Sprite):
 
     def __init__(self, sugarscape, x, y):
 
-        self.groups = sugarscape.all_sprites
+        self.groups = [sugarscape.all_sprites, sugarscape.cells]
         pg.sprite.Sprite.__init__(self, self.groups)
         self.sugarscape = sugarscape
         self.image = pg.Surface((TILESIZE, TILESIZE))
@@ -207,13 +218,11 @@ class Cell(pg.sprite.Sprite):
 
     def sugarRegen(self):
         
-        for y in range(GRIDHEIGHT):
-            for x in range(GRIDWIDTH):
-                self.sugar = min(self.sugar + self.regen_rate, self.sugar_max)
+        self.sugar = min(self.sugar + self.regen_rate, self.sugar_max)
 
     def update(self):
 
-        #self.sugarRegen()
+        self.sugarRegen()
 
         r = max(40, int(self.sugar / self.sugar_max * 255))
         g = max(40, int(self.sugar / self.sugar_max * 255))

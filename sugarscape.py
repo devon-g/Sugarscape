@@ -17,8 +17,11 @@ class Sugarscape:
     def new(self):
         #random.seed(1)
 
-        # Group containing all sprites for easy updating
+        # Group containing sprites for easy updating
         self.all_sprites = pg.sprite.Group()
+        self.agents = pg.sprite.Group()
+        self.reproductive_agents = pg.sprite.Group()
+        self.cells = pg.sprite.Group()
 
         # Python dumb so index (y, x) instead of (x, y)
         self.map = []
@@ -32,16 +35,16 @@ class Sugarscape:
             
             self.map.append(row)
 
+        na = 20
+        nra = 5
+
         # Generate agents
-        for n in range(400):
+        for n in range(na + nra):
             # Spawn agents
-
-            Agent(self)
-
-            # if n < nra:
-            #     ReproductiveAgent(self, x, y)
-            # else:
-            #     Agent(self, x, y)
+            if n < nra:
+                ReproductiveAgent(self)
+            else:
+                Agent(self)
 
     def run(self):
 
@@ -65,7 +68,7 @@ class Sugarscape:
     def update(self):
         # Update sprites.
         self.all_sprites.update()
-        pg.display.set_caption(TITLE + f"; Agents Alive: {str(len(self.all_sprites.sprites()))}")
+        pg.display.set_caption(TITLE + f"; Agents: {str(len(self.agents.sprites()))}, ReAgents: {str(len(self.reproductive_agents.sprites()))}")
 
     def draw_grid(self):
 
