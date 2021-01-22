@@ -5,15 +5,17 @@ from settings import *
 
 class Agent(pg.sprite.Sprite):
 
-    def __init__(self, sugarscape, x, y):
+    def __init__(self, sugarscape, x = None, y = None):
 
+        # Pygame sprite stuff
         self.groups = sugarscape.all_sprites
         pg.sprite.Sprite.__init__(self, self.groups)
-        self.sugarscape = sugarscape
-        self.image = pg.Surface((TILESIZE - 1, TILESIZE - 1))
+        self.image = pg.Surface((TILESIZE - 10, TILESIZE - 10))
         self.image.fill(GREEN)
         self.rect = self.image.get_rect()
 
+        # Sugarscape agent stuff
+        self.sugarscape = sugarscape
         self.vision = random.randint(1, 7)
         self.metabolism = random.uniform(1, 4)
         self.sugar = random.uniform(0, self.metabolism*2)
@@ -22,12 +24,23 @@ class Agent(pg.sprite.Sprite):
         self.x = x
         self.y = y
 
-        self.sugarscape.map[self.y][self.x]['agent'] = self
+        # Generate coordinates if not specified during init.
+        if self.x is None or self.y is None:
+            
+            self.x = random.randint(0, GRIDWIDTH - 1)
+            self.y = random.randint(0, GRIDHEIGHT - 1)
+
+            while self.sugarscape.map[self.y][self.x].agentPresent():
+
+                self.x = random.randint(0, GRIDWIDTH - 1)
+                self.y = random.randint(0, GRIDHEIGHT - 1)
+
+        self.sugarscape.map[self.y][self.x].setAgent(self)
         self.eat()
 
     def look(self):
 
-        # I hate vanilla 2darrays
+        # I hate sublist 2darrays
         north = [self.sugarscape.map[max(0, self.y - dy)][self.x] for dy in range(1, self.vision + 1)]
         south = [self.sugarscape.map[min(GRIDHEIGHT - 1, self.y + dy)][self.x] for dy in range(1, self.vision + 1)]
         east = [self.sugarscape.map[self.y][min(GRIDWIDTH - 1, self.x + dx)] for dx in range(1, self.vision + 1)]
@@ -39,19 +52,20 @@ class Agent(pg.sprite.Sprite):
 
         # Search for cell with most sugar
         best_cell = cells[0]
-        best_val = cells[0]['sugar_current']
+        best_val = cells[0].getSugar()
         for cell in cells:
-            if cell['sugar_current'] > best_val and cell['agent'] is None:
+            if cell.getSugar() > best_val and cell.agentPresent is False:
                 best_cell = cell
-                best_val = cell['sugar_current']
+                best_val = cell.getSugar()
 
         # Return old cell to new cell displacement
-        return best_cell['coordinates'][0] - self.x, best_cell['coordinates'][1] - self.y
+        cellx, celly = best_cell.getCoords()
+        return cellx - self.x, celly - self.y
 
     def move(self, dx=0, dy=0):
 
         # Clear current agent global coordinates
-        self.sugarscape.map[self.y][self.x]['agent'] = None
+        self.sugarscape.map[self.y][self.x].delAgent()
 
         # Update local coordinates
         self.x += dx
@@ -68,12 +82,12 @@ class Agent(pg.sprite.Sprite):
             self.y = GRIDHEIGHT + self.y
 
         # Set new agent global coordinates
-        self.sugarscape.map[self.y][self.x]['agent'] = self
+        self.sugarscape.map[self.y][self.x].setAgent(self)
 
     def eat(self):
         # Eat entire contents of cell sugar
-        self.sugar += self.sugarscape.map[self.y][self.x]['sugar_current']
-        self.sugarscape.map[self.y][self.x]['sugar_current'] = 0
+        self.sugar += self.sugarscape.map[self.y][self.x].getSugar()
+        self.sugarscape.map[self.y][self.x].sugarEaten()
 
     def update(self):
 
@@ -85,7 +99,7 @@ class Agent(pg.sprite.Sprite):
         # If Agent sugar level at or below 0, Agent starves to death.
         if self.sugar <= 0:
             self.sugar = 0
-            self.sugarscape.map[self.y][self.x]['agent'] = None
+            self.sugarscape.map[self.y][self.x].delAgent()
             self.sugarscape.all_sprites.remove(self)
 
         self.eat()
@@ -99,8 +113,8 @@ class Agent(pg.sprite.Sprite):
         b = 0
         self.image.fill((r, g, b))
 
-        self.rect.x = self.x * TILESIZE + 1
-        self.rect.y = self.y * TILESIZE + 1
+        self.rect.x = self.x * TILESIZE + 5
+        self.rect.y = self.y * TILESIZE + 5
 
 
 class ReproductiveAgent(Agent):
@@ -122,8 +136,9 @@ class ReproductiveAgent(Agent):
             random.shuffle(directions)
 
             for d in directions:
-                if d['agent'] is None:
-                    random.choice([Agent(self.sugarscape, d['coordinates'][0], d['coordinates'][1]), ReproductiveAgent(self.sugarscape, d['coordinates'][0], d['coordinates'][1])])
+                if d.agentPresent() is False:
+                    x, y = d.getCoords()
+                    random.choice([Agent(self.sugarscape, x, y), ReproductiveAgent(self.sugarscape, x, y)])
                     return
 
     def update(self):
@@ -139,11 +154,66 @@ class ReproductiveAgent(Agent):
 
 class Cell(pg.sprite.Sprite):
 
-    def __init__(self):
+    def __init__(self, sugarscape, x, y):
 
-        pass
+        self.groups = sugarscape.all_sprites
+        pg.sprite.Sprite.__init__(self, self.groups)
+        self.sugarscape = sugarscape
+        self.image = pg.Surface((TILESIZE, TILESIZE))
+        self.image.fill(WHITE)
+        self.rect = self.image.get_rect()
+
+        self.sugar_max = random.randint(1, 20)
+        self.sugar = random.randint(0, self.sugar_max)
+        self.regen_rate = random.random()
+        self.agent = None
+        self.x = x
+        self.y = y
+        self.rect.x = self.x * TILESIZE
+        self.rect.y = self.y * TILESIZE
+
+    def getSugar(self):
+        
+        return self.sugar
+
+    def getSugarMax(self):
+        
+        return self.sugar_max
+
+    def sugarEaten(self):
+        
+        self.sugar = 0
+
+    def setAgent(self, agent):
+
+        self.agent = agent
+    
+    def delAgent(self):
+
+        self.agent = None
+
+    def agentPresent(self):
+        
+        if self.agent is None:
+            present = False
+        else:
+            present = True
+        
+        return present
+
+    def getCoords(self):
+
+        return self.x, self.y
+
+    def sugarRegen(self):
+        
+        for y in range(GRIDHEIGHT):
+            for x in range(GRIDWIDTH):
+                self.sugar = min(self.sugar + self.regen_rate, self.sugar_max)
 
     def update(self):
+
+        #self.sugarRegen()
 
         r = max(40, int(self.sugar / self.sugar_max * 255))
         g = max(40, int(self.sugar / self.sugar_max * 255))

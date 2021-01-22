@@ -17,44 +17,31 @@ class Sugarscape:
     def new(self):
         #random.seed(1)
 
-        # Python dumb so index (y, x) instead of (x, y)
-        self.map = []
-        for y in range(GRIDHEIGHT):
-            row = []
-            for x in range(GRIDWIDTH):
-                sugar_max = random.randint(1, 20)
-                row.append({
-                    'sugar_current': random.randint(0, sugar_max),
-                    'sugar_max': sugar_max,
-                    'regen_rate': random.random(),
-                    'agent': None,
-                    'coordinates': (x, y)
-                })
-            self.map.append(row)
-
         # Group containing all sprites for easy updating
         self.all_sprites = pg.sprite.Group()
 
-        na = 20 # Number of agents
-        nra = 5 # Number of reproductive agents
+        # Python dumb so index (y, x) instead of (x, y)
+        self.map = []
+        for y in range(GRIDHEIGHT):
+            
+            row = []
+            
+            for x in range(GRIDWIDTH):
+
+                row.append(Cell(self, x, y))
+            
+            self.map.append(row)
 
         # Generate agents
-        for n in range(na + nra):
-            # Initial agent coords
-            x = random.randint(0, GRIDWIDTH - 1)
-            y = random.randint(0, GRIDHEIGHT - 1)
-
-            # Check if agent is already present at coords
-            while self.map[y][x]['agent'] is not None:
-                x = random.randint(0, GRIDWIDTH - 1)
-                y = random.randint(0, GRIDHEIGHT - 1)
-
+        for n in range(400):
             # Spawn agents
-            if n < nra:
-                ReproductiveAgent(self, x, y)
-            else:
-                Agent(self, x, y)
 
+            Agent(self)
+
+            # if n < nra:
+            #     ReproductiveAgent(self, x, y)
+            # else:
+            #     Agent(self, x, y)
 
     def run(self):
 
@@ -80,11 +67,6 @@ class Sugarscape:
         self.all_sprites.update()
         pg.display.set_caption(TITLE + f"; Agents Alive: {str(len(self.all_sprites.sprites()))}")
 
-        # Update sugar
-        for y in range(GRIDHEIGHT):
-            for x in range(GRIDWIDTH):
-                self.map[y][x]['sugar_current'] = min(self.map[y][x]['sugar_current'] + self.map[y][x]['regen_rate'], self.map[y][x]['sugar_max'])
-
     def draw_grid(self):
 
         for x in range(0, WIDTH, TILESIZE):
@@ -95,7 +77,7 @@ class Sugarscape:
     def draw(self):
 
         self.screen.fill(DARKGREY)
-        self.draw_grid()
+        #self.draw_grid()
         self.all_sprites.draw(self.screen)
         pg.display.flip()
 
