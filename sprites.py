@@ -6,15 +6,15 @@ from settings import *
 class Agent(pg.sprite.Sprite):
 
     def __init__(self, sugarscape, x = None, y = None):
-
         # Pygame sprite stuff
         if type(self) == Agent:
-            self.groups = [sugarscape.all_sprites, sugarscape.agents]
-        pg.sprite.Sprite.__init__(self, self.groups)
+            self.groups_list = [sugarscape.all_sprites, sugarscape.agents]
+        pg.sprite.Sprite.__init__(self, self.groups_list)
         self.image = pg.Surface((TILESIZE - 10, TILESIZE - 10))
         self.image.fill(GREEN)
         self.rect = self.image.get_rect()
 
+        print(self, sugarscape)
         # Sugarscape agent stuff
         self.sugarscape = sugarscape
         self.vision = random.randint(1, 7)
@@ -24,10 +24,6 @@ class Agent(pg.sprite.Sprite):
 
         self.x = x
         self.y = y
-
-        # Definitely fixed ghost sprite
-        self.rect.x = -10
-        self.rect.y = -10
 
         # Generate coordinates if not specified during init.
         if self.x is None or self.y is None:
@@ -39,6 +35,9 @@ class Agent(pg.sprite.Sprite):
 
                 self.x = random.randint(0, GRIDWIDTH - 1)
                 self.y = random.randint(0, GRIDHEIGHT - 1)
+
+        self.rect.x = self.x * TILESIZE + 5
+        self.rect.y = self.y * TILESIZE + 5
 
         self.sugarscape.map[self.y][self.x].setAgent(self)
         self.eat()
@@ -105,10 +104,9 @@ class Agent(pg.sprite.Sprite):
         # If Agent sugar level at or below 0, Agent starves to death.
         if self.sugar <= 0:
             self.sugar = 0
-            self.sugarscape.map[self.y][self.x].delAgent()
+            self.kill()
 
-            for group in self.groups:
-                group.remove(self)
+            self.sugarscape.map[self.y][self.x].delAgent()
 
         self.eat()
 
@@ -129,9 +127,9 @@ class ReproductiveAgent(Agent):
 
     def __init__(self, sugarscape, x = None, y = None):
 
-        self.groups = [sugarscape.all_sprites, sugarscape.reproductive_agents]
+        self.groups_list = [sugarscape.all_sprites, sugarscape.reproductive_agents]
+        self.reproduce_threshold = 10
         Agent.__init__(self, sugarscape, x, y)
-        self.reproduce_threshold = 1.5 * self.metabolism
 
     def reproduce(self):
 
@@ -147,8 +145,10 @@ class ReproductiveAgent(Agent):
             for d in directions:
                 if ~d.agentPresent():
                     x, y = d.getCoords()
-                    print(x, y)
-                    Agent(self.sugarscape, x, y)
+                    child = Agent(self.sugarscape, x, y)
+                    print(child.groups())
+                    print(child.x, child.y)
+                    print(child.rect.x, child.rect.y)
                     #random.choice([Agent(self.sugarscape, x, y), ReproductiveAgent(self.sugarscape, x, y)])
                     return
 
@@ -167,8 +167,8 @@ class Cell(pg.sprite.Sprite):
 
     def __init__(self, sugarscape, x, y):
 
-        self.groups = [sugarscape.all_sprites, sugarscape.cells]
-        pg.sprite.Sprite.__init__(self, self.groups)
+        self.groups_list = [sugarscape.all_sprites, sugarscape.cells]
+        pg.sprite.Sprite.__init__(self, self.groups_list)
         self.sugarscape = sugarscape
         self.image = pg.Surface((TILESIZE, TILESIZE))
         self.image.fill(WHITE)

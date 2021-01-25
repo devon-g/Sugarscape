@@ -32,10 +32,10 @@ class Sugarscape:
             for x in range(GRIDWIDTH):
 
                 row.append(Cell(self, x, y))
-            
+
             self.map.append(row)
 
-        na = 20
+        na = 0
         nra = 5
 
         # Generate agents
