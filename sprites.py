@@ -14,7 +14,6 @@ class Agent(pg.sprite.Sprite):
         self.image.fill(GREEN)
         self.rect = self.image.get_rect()
 
-        print(self, sugarscape)
         # Sugarscape agent stuff
         self.sugarscape = sugarscape
         self.vision = random.randint(1, 7)
@@ -113,7 +112,7 @@ class Agent(pg.sprite.Sprite):
         if self.sugar >= self.sugar_max:
             self.sugar_max = self.sugar
 
-        # Update sprite location and color
+        # Transition agent sprite from green to red based on sugar level.
         r = int((1 - (self.sugar / self.sugar_max)) * 255)
         g = int(self.sugar / self.sugar_max * 255)
         b = 0
@@ -134,7 +133,7 @@ class ReproductiveAgent(Agent):
     def reproduce(self):
 
         if self.sugar >= self.reproduce_threshold:
-
+            # Look at all adjacent spaces to parent.
             north = self.sugarscape.map[(self.y - 1) % GRIDHEIGHT][self.x]
             south = self.sugarscape.map[(self.y + 1) % GRIDHEIGHT][self.x]
             east = self.sugarscape.map[self.y][(self.x + 1) % GRIDWIDTH]
@@ -142,21 +141,20 @@ class ReproductiveAgent(Agent):
             directions = [north, south, east, west]
             random.shuffle(directions)
 
+            # Spawn new agent at first unoccupied cell.
             for d in directions:
                 if ~d.agentPresent():
                     x, y = d.getCoords()
-                    child = Agent(self.sugarscape, x, y)
-                    print(child.groups())
-                    print(child.x, child.y)
-                    print(child.rect.x, child.rect.y)
+                    Agent(self.sugarscape, x, y)
                     #random.choice([Agent(self.sugarscape, x, y), ReproductiveAgent(self.sugarscape, x, y)])
                     return
 
     def update(self):
-
+        # Keep Agent update but add onto it.
         Agent.update(self)
         self.reproduce()
 
+        # Transition agent sprite from blue to red based on sugar level.
         r = int((1 - (self.sugar / self.sugar_max)) * 255)
         g = 0
         b = int(self.sugar / self.sugar_max * 255)
@@ -166,7 +164,7 @@ class ReproductiveAgent(Agent):
 class Cell(pg.sprite.Sprite):
 
     def __init__(self, sugarscape, x, y):
-
+        # PyGame sprite stuff
         self.groups_list = [sugarscape.all_sprites, sugarscape.cells]
         pg.sprite.Sprite.__init__(self, self.groups_list)
         self.sugarscape = sugarscape
@@ -174,6 +172,7 @@ class Cell(pg.sprite.Sprite):
         self.image.fill(WHITE)
         self.rect = self.image.get_rect()
 
+        # Sugarscape cell stuff
         self.sugar_max = random.randint(1, 20)
         self.sugar = random.randint(0, self.sugar_max)
         self.regen_rate = random.random()
@@ -224,6 +223,7 @@ class Cell(pg.sprite.Sprite):
 
         self.sugarRegen()
 
+        # Transition cell sprite from white to dark grey based on sugar level.
         r = max(40, int(self.sugar / self.sugar_max * 255))
         g = max(40, int(self.sugar / self.sugar_max * 255))
         b = max(40, int(self.sugar / self.sugar_max * 255))

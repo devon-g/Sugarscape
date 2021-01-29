@@ -35,13 +35,10 @@ class Sugarscape:
 
             self.map.append(row)
 
-        na = 0
-        nra = 5
-
         # Generate agents
-        for n in range(na + nra):
+        for n in range(NUMAGENTS + NUMREPAGENTS):
             # Spawn agents
-            if n < nra:
+            if n < NUMREPAGENTS:
                 ReproductiveAgent(self)
             else:
                 Agent(self)
@@ -80,7 +77,7 @@ class Sugarscape:
     def draw(self):
 
         self.screen.fill(DARKGREY)
-        #self.draw_grid()
+        self.draw_grid()
         self.all_sprites.draw(self.screen)
         pg.display.flip()
 
