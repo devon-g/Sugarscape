@@ -99,7 +99,7 @@ surface of it. I should also give Agents and Cells less information to better fo
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-To run the program enter `pygame sugarscape.py` into the terminal.
+To run the program enter `python3 sugarscape.py` into the terminal.
 
 Some properties of the simulation can be modified in the settings.py file:
 * Grid Width/Height
